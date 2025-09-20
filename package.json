@@ -1,5 +1,5 @@
 {
-  "name": "prueba-back",
+  "name": "dlc.api",
   "version": "0.0.1",
   "description": "",
   "author": "",
@@ -50,6 +50,8 @@
     "typeorm": "^0.3.20"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@nestjs/cli": "^10.0.0",
     "@nestjs/schematics": "^10.0.0",
     "@nestjs/testing": "^10.0.0",
@@ -66,9 +68,9 @@
     "eslint": "^8.42.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-prettier": "^5.0.0",
-    "husky": "^4.2.5",
+    "husky": "^9.1.7",
     "jest": "^29.5.0",
-    "lint-staged": "^10.1.7",
+    "lint-staged": "^16.1.5",
     "prettier": "^3.0.0",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
@@ -95,16 +97,9 @@
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
-  },
   "lint-staged": {
-    "**/*.ts": [
-      "eslint --fix"
-    ],
-    "**/*.tsx": [
+    "*.{ts,tsx,js,json,css,scss,md}": [
+      "prettier --write",
       "eslint --fix"
     ]
   }
