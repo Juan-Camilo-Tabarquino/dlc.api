@@ -24,7 +24,11 @@ export class Company {
   @Column()
   adress: string;
 
-  @Column('text', { array: true })
+  @Column('text', {
+    array: true,
+    nullable: false,
+    default: () => `{"06:00:00", "18:00:00"}`,
+  })
   monitoringTime: string[];
 
   @Column()

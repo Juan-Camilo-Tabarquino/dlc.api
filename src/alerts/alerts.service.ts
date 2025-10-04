@@ -190,22 +190,6 @@ export class AlertsService implements OnModuleInit, OnModuleDestroy {
   }
 
   async updateAlertStatus(id: number, newStatus: UpdateAlertStatusDto) {
-    // const result = await this.alertsRepo
-    //   .createQueryBuilder()
-    //   .update()
-    //   .set({ status: newStatus.status })
-    //   .where('id = :id', { id })
-    //   .returning('*')
-    //   .execute();
-
-    // const updatedAlert = result.raw[0];
-
-    // if (!updatedAlert) {
-    //   throw new NotFoundException(`Alert with id ${id} not found`);
-    // }
-
-    // return updatedAlert;
-
     const { affected } = await this.alertsRepo.update(id, {
       status: newStatus.status,
     });

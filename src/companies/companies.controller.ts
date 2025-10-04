@@ -49,7 +49,7 @@ export class CompaniesController {
     @Param('id') id: number,
     @Body() updateCompanyDto: UpdateCompanyDto,
   ) {
-    return this.companiesService.updateCompany(id, updateCompanyDto);
+    return this.companiesService.updateCompany(Number(id), updateCompanyDto);
   }
 
   @Put('/active/:id')

@@ -19,7 +19,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js",
-    "typeorm:generate-migration": "yarn typeorm migration:generate -d ./typeOrm.config.ts ./src/database/migrations",
+    "typeorm:generate-migration": "yarn typeorm migration:generate -d ./typeOrm.config.ts ./src/migrations/",
     "typeorm:run-migration": "yarn typeorm migration:run -d ./typeOrm.config.ts",
     "typeorm:revert-migration": "yarn typeorm migration:revert -d ./typeOrm.config.ts"
   },
@@ -38,6 +38,7 @@
     "bcryptjs": "^2.4.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "dotenv": "^17.2.3",
     "firebase-admin": "^13.2.0",
     "lodash": "^4.17.21",
     "passport": "^0.7.0",
