@@ -13,5 +13,5 @@ export default new DataSource({
   database: process.env.DB_NAME,
   entities: [join(__dirname, '../**/*.entity{.ts,.js}')],
   migrationsTableName: 'migrations',
-  migrations: [join(__dirname, './src/database/*.ts')],
+  migrations: [join(__dirname, './src/migrations/*.ts')],
 });

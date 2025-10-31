@@ -64,7 +64,6 @@ export class CompaniesService {
 
   async updateCompany(id: number, updateCompanyDto: UpdateCompanyDto) {
     const { ...toUpdate } = updateCompanyDto;
-
     const company = await this.companyRepo.preload({ id, ...toUpdate });
 
     if (!company) {
