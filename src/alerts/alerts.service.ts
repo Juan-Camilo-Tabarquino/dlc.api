@@ -89,7 +89,9 @@ export class AlertsService implements OnModuleInit, OnModuleDestroy {
       clients.forEach((client) => {
         client.emit('alert', alert);
       });
-      this.updateAlertStatus(alert.id, { status: 1 });
+      if (alert.status == 0) {
+        this.updateAlertStatus(alert.id, { status: 1 });
+      }
     }
   }
 
