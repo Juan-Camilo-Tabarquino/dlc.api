@@ -54,4 +54,7 @@ export class User {
 
   @Column({ nullable: true })
   tokenfirebase: string;
+
+  @Column({ nullable: true })
+  mobileVersion: string;
 }

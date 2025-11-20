@@ -1,63 +1,75 @@
+import { Alert } from 'src/alerts/alert.entity';
+import { CreateLastLocationDto } from './dto/create-lastlocation.dto';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LastLocation } from './lastlocation.entity';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { UpdateLastLocationDto } from './dto/update-lastlocation.dto';
-import { CreateLastLocationDto } from './dto/create-lastlocation.dto';
 
 @Injectable()
 export class LastlocationsService {
   constructor(
     @InjectRepository(LastLocation)
     private lastLocationsRepo: Repository<LastLocation>,
+    @InjectRepository(Alert)
+    private alertsRepo: Repository<Alert>,
   ) {}
 
-  findALl() {
-    try {
-      const res = this.lastLocationsRepo.find().then((r) => r);
-      return res;
-    } catch (error) {
-      return {
-        msg: 'Error find all last locations',
-        error,
-      };
-    }
+  async findAll() {
+    const locations = await this.lastLocationsRepo.find();
+
+    const result = await Promise.all(
+      locations.map(async (loc) => {
+        const alert = await this.alertsRepo.findOne({
+          where: {
+            iduser: Number(loc.iduser),
+            status: In([0, 1]),
+          },
+        });
+
+        return {
+          ...loc,
+          hasAlert: !!alert,
+        };
+      }),
+    );
+
+    return result;
   }
 
   async findOne(idUser: string) {
-    try {
-      const lastlocation = await this.lastLocationsRepo.findOneBy({
-        iduser: idUser,
-      });
+    const lastLocation = await this.lastLocationsRepo.findOneBy({
+      iduser: idUser,
+    });
 
-      if (!lastlocation) {
-        return new NotFoundException();
-      }
-
-      return lastlocation;
-    } catch (error) {
-      return {
-        msg: 'Error find one last location',
-        error,
-      };
+    if (!lastLocation) {
+      throw new NotFoundException(
+        `No existe lastlocation para el usuario ${idUser}`,
+      );
     }
+
+    const alert = await this.alertsRepo.findOne({
+      where: {
+        iduser: Number(idUser),
+        status: In([0, 1]),
+      },
+    });
+
+    return {
+      ...lastLocation,
+      hasAlert: !!alert,
+    };
   }
 
-  async create(createLastLocationDto: CreateLastLocationDto) {
-    try {
-      const serverDate = new Date().toISOString();
-      const newLastLocation = this.lastLocationsRepo.create({
-        serverDate,
-        ...createLastLocationDto,
-      });
+  async create(dto: CreateLastLocationDto) {
+    const serverDate = new Date().toISOString();
 
-      return await this.lastLocationsRepo.save(newLastLocation);
-    } catch (error) {
-      return {
-        msg: 'Error create lastlocation',
-        error,
-      };
-    }
+    const newLastLocation = this.lastLocationsRepo.create({
+      serverDate,
+      ...dto,
+    });
+
+    return await this.lastLocationsRepo.save(newLastLocation);
   }
 
   async update(id: number, userId: string, updateData: UpdateLastLocationDto) {
@@ -82,6 +94,32 @@ export class LastlocationsService {
         error,
       };
     }
+  }
+
+  async updateOrCreate(userId: string, updateData: UpdateLastLocationDto) {
+    const serverDate = new Date().toISOString();
+
+    const existing = await this.lastLocationsRepo.findOneBy({
+      iduser: userId,
+    });
+
+    if (!existing) {
+      const newEntry = this.lastLocationsRepo.create({
+        ...updateData,
+        iduser: userId,
+        serverDate,
+      });
+      return this.lastLocationsRepo.save(newEntry);
+    }
+
+    const updated = await this.lastLocationsRepo.preload({
+      id: existing.id,
+      iduser: userId,
+      serverDate,
+      ...updateData,
+    });
+
+    return this.lastLocationsRepo.save(updated);
   }
 
   async clearTable() {

@@ -9,19 +9,19 @@ export class RolesService {
   constructor(@InjectRepository(Role) private roleRepo: Repository<Role>) {}
 
   findAll() {
-    const res = this.roleRepo.find().then((r) => r);
-    return res;
+    return this.roleRepo.find();
   }
 
   async create(createRole: CreateRoleDto) {
+    if (!createRole.name) {
+      throw new Error('El nombre del rol es obligatorio.');
+    }
+
     try {
       const newRole = this.roleRepo.create(createRole);
-      return this.roleRepo.save(newRole);
+      return await this.roleRepo.save(newRole);
     } catch (error) {
-      return {
-        msg: 'Error Create New Role',
-        error,
-      };
+      throw new Error('Error creando el rol.');
     }
   }
 

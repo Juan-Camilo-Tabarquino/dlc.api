@@ -10,82 +10,36 @@ import {
 } from '@nestjs/common';
 import { ApiResponse } from '@nestjs/swagger';
 import { CreateUserDto } from './dto/create-user.dto';
-import { isArray, map, orderBy } from 'lodash';
-import { LastlocationsService } from 'src/lastlocations/lastlocations.service';
 import { SaveTokenFirebaseDto } from './dto/save-token.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
+import { SaveMobileVersionDto } from './dto/save-mobile-version.dto';
 
 @Controller('users')
 export class UsersController {
-  constructor(
-    private usersService: UsersService,
-    private readonly lastLocationService: LastlocationsService,
-  ) {}
+  constructor(private readonly usersService: UsersService) {}
 
   @Get('user/withLastLocation/:companyId')
-  async getUsersWithLastLocation(@Param('companyId') companyId: number) {
-    try {
-      const users =
-        await this.usersService.findAllActivesUsersByCompany(companyId);
-      const usersWithLastLocation = await Promise.all(
-        isArray(users)
-          ? map(users, async (user) => {
-              const lastlocation = await this.lastLocationService.findOne(
-                user.id.toString(),
-              );
-              return { ...user, lastlocation };
-            })
-          : null,
-      );
-      return usersWithLastLocation;
-    } catch (error) {
-      return {
-        msg: 'Error Obtener Usuario con lastLocation',
-        error,
-      };
-    }
+  getUsersWithLastLocation(
+    @Param('companyId', ParseIntPipe) companyId: number,
+  ) {
+    return this.usersService.getUsersWithLastLocation(companyId);
   }
 
   @Get('company/:companyId')
-  getAllByCompany(@Param('companyId') companyId: number) {
+  getAllByCompany(@Param('companyId', ParseIntPipe) companyId: number) {
     return this.usersService.findAllByCompany(companyId);
   }
 
   @Get('/:id')
-  getUserById(@Param('id') id: number) {
+  getUserById(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.findOneById(id);
   }
 
   @Get('user/withAllLastLocation')
-  async getUsersWithLastLocationAllCompanies() {
-    try {
-      const users = await this.getAll();
-      const usersWithLastLocation = await Promise.all(
-        isArray(users)
-          ? map(users, async (user) => {
-              const lastlocation = await this.lastLocationService.findOne(
-                user.id.toString(),
-              );
-              return { ...user, lastlocation };
-            })
-          : null,
-      );
-
-      const sortedUsers = orderBy(
-        usersWithLastLocation,
-        [(user) => user.company?.name?.toLowerCase() || ''],
-        ['asc'],
-      );
-
-      return sortedUsers;
-    } catch (error) {
-      return {
-        msg: 'Error Obtener Usuario con lastLocation',
-        error,
-      };
-    }
+  getUsersWithLastLocationAllCompanies() {
+    return this.usersService.getUsersWithLastLocationAllCompanies();
   }
 
   @Get()
@@ -100,7 +54,7 @@ export class UsersController {
     type: User,
   })
   @ApiResponse({ status: 400, description: 'Bad request', type: User })
-  async create(@Body() createUserDto: CreateUserDto) {
+  create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
   }
 
@@ -110,30 +64,34 @@ export class UsersController {
     description: 'Token actualizado correctamente',
     type: User,
   })
-  @ApiResponse({ status: 400, description: 'Bad request', type: User })
   async saveTokenFirebase(@Body() tokenData: SaveTokenFirebaseDto) {
     return this.usersService.saveTokenFirebase(tokenData);
   }
 
+  @Post('save-mobile-version')
+  async saveMobileVersion(@Body() data: SaveMobileVersionDto) {
+    return this.usersService.saveMobileVersion(data);
+  }
+
   @Put('/active/:id')
-  @ApiResponse({
-    status: 201,
-    description: 'El usuario fue actualizado exitosamente',
-    type: User,
-  })
-  @ApiResponse({ status: 400, description: 'Bad request', type: User })
-  updateActiveUser(@Param('id') id: number) {
+  updateActiveUser(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.updateActiveUser(id);
   }
 
   @Put('/:id')
-  updateUser(@Param('id') id: number, @Body() updateUserDto: UpdateUserDto) {
+  updateUser(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateUserDto: UpdateUserDto,
+  ) {
     return this.usersService.updateUser(id, updateUserDto);
   }
 
   @Put('/updatepassword/:id')
-  updateUserPassword(@Param('id') id: number, @Body() Body) {
-    return this.usersService.updatePassword(id, Body.newPassword);
+  updateUserPassword(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('newPassword') newPassword: string,
+  ) {
+    return this.usersService.updatePassword(id, newPassword);
   }
 
   @Delete(':id')
