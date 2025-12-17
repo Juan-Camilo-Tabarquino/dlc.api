@@ -20,6 +20,11 @@ import { SaveMobileVersionDto } from './dto/save-mobile-version.dto';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @Get('user/withAllLastLocation')
+  getUsersWithLastLocationAllCompanies() {
+    return this.usersService.getUsersWithLastLocationAllCompanies();
+  }
+
   @Get('user/withLastLocation/:companyId')
   getUsersWithLastLocation(
     @Param('companyId', ParseIntPipe) companyId: number,
@@ -35,11 +40,6 @@ export class UsersController {
   @Get('/:id')
   getUserById(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.findOneById(id);
-  }
-
-  @Get('user/withAllLastLocation')
-  getUsersWithLastLocationAllCompanies() {
-    return this.usersService.getUsersWithLastLocationAllCompanies();
   }
 
   @Get()
