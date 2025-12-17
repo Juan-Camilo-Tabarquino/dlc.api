@@ -97,10 +97,14 @@ export class UsersService {
 
       const usersWithLastLocation = await Promise.all(
         map(users, async (user) => {
-          const lastlocation = await this.lastLocationService.findOne(
-            user.id.toString(),
-          );
-          return { ...user, lastlocation };
+          try {
+            const lastlocation = await this.lastLocationService.findOne(
+              user.id.toString(),
+            );
+            return { ...user, lastlocation };
+          } catch (error) {
+            return { ...user, lastlocation: {} };
+          }
         }),
       );
 
