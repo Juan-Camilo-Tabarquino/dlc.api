@@ -84,15 +84,17 @@ export class AlertsService implements OnModuleInit, OnModuleDestroy {
   }
 
   sendAlertToCompany(companyId: number, alert: Alert) {
+    if (alert.status !== 0) return;
+
     const clients = this.clientsByCompany.get(companyId);
-    if (clients) {
-      clients.forEach((client) => {
-        client.emit('alert', alert);
-      });
-      if (alert.status == 0) {
-        this.updateAlertStatus(alert.id, { status: 1 });
-      }
-    }
+
+    if (!clients || clients.size === 0) return;
+
+    clients.forEach((client) => {
+      client.emit('alert', alert);
+    });
+
+    this.updateAlertStatus(alert.id, { status: 1 });
   }
 
   async findAlertsById(id: number) {
