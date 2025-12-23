@@ -1,3 +1,13 @@
+import { Company } from 'src/companies/company.entity';
+import { CreateUserDto } from './dto/create-user.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { isArray, map, omit, orderBy } from 'lodash';
+import { LastlocationsService } from 'src/lastlocations/lastlocations.service';
+import { Not, Repository } from 'typeorm';
+import { SaveTokenFirebaseDto } from './dto/save-token.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { User } from './user.entity';
+import { UserMapper } from './mappers/user.mapper';
 import {
   BadRequestException,
   ConflictException,
@@ -5,17 +15,8 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { Company } from 'src/companies/company.entity';
-import { CreateUserDto } from './dto/create-user.dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Not, Repository } from 'typeorm';
-import { isArray, map, omit, orderBy } from 'lodash';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { User } from './user.entity';
 import * as bcrypt from 'bcryptjs';
 import * as dotenv from 'dotenv';
-import { SaveTokenFirebaseDto } from './dto/save-token.dto';
-import { LastlocationsService } from 'src/lastlocations/lastlocations.service';
 
 dotenv.config();
 
@@ -28,12 +29,13 @@ export class UsersService {
     private readonly lastLocationService: LastlocationsService,
   ) {}
 
-  findAll() {
-    return this.usersRepo.find({
+  async findAll() {
+    const users = await this.usersRepo.find({
       where: { role: Not(1) },
       relations: ['company'],
       order: { id: 'ASC' },
     });
+    return UserMapper.toResponseList(users);
   }
 
   findAllByCompany(companyId: number) {
@@ -77,7 +79,7 @@ export class UsersService {
           }
 
           return {
-            ...user,
+            ...UserMapper.toResponse(user),
             lastlocation,
             hasAlert: lastlocation?.hasAlert ?? false,
           };

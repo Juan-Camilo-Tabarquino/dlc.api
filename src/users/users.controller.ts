@@ -1,3 +1,10 @@
+import { ApiResponse } from '@nestjs/swagger';
+import { CreateUserDto } from './dto/create-user.dto';
+import { SaveMobileVersionDto } from './dto/save-mobile-version.dto';
+import { SaveTokenFirebaseDto } from './dto/save-token.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { User } from './user.entity';
+import { UsersService } from './users.service';
 import {
   Body,
   Controller,
@@ -8,13 +15,6 @@ import {
   Post,
   Put,
 } from '@nestjs/common';
-import { ApiResponse } from '@nestjs/swagger';
-import { CreateUserDto } from './dto/create-user.dto';
-import { SaveTokenFirebaseDto } from './dto/save-token.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { User } from './user.entity';
-import { UsersService } from './users.service';
-import { SaveMobileVersionDto } from './dto/save-mobile-version.dto';
 
 @Controller('users')
 export class UsersController {
