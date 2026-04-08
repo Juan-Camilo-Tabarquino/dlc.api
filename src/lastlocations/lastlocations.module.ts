@@ -4,11 +4,12 @@ import { LastlocationsController } from './lastlocations.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LastLocation } from './lastlocation.entity';
 import { LocationsModule } from 'src/locations/locations.module';
+import { Alert } from 'src/alerts/alert.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([LastLocation]), LocationsModule],
+  imports: [TypeOrmModule.forFeature([LastLocation, Alert]), LocationsModule],
   providers: [LastlocationsService],
   controllers: [LastlocationsController],
-  exports: [TypeOrmModule],
+  exports: [LastlocationsService],
 })
 export class LastlocationsModule {}

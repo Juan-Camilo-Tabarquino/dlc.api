@@ -35,6 +35,12 @@ export class CompaniesService {
   }
 
   async create(createCompanyDto: CreateCompanyDto) {
+    if (!createCompanyDto.name || !createCompanyDto.nit) {
+      throw new BadRequestException(
+        'Nombre y NIT son obligatorios para crear una empresa',
+      );
+    }
+
     try {
       const serverDate = new Date().toLocaleDateString();
       const newCompany = this.companyRepo.create({
@@ -63,14 +69,18 @@ export class CompaniesService {
   }
 
   async updateCompany(id: number, updateCompanyDto: UpdateCompanyDto) {
-    const { ...toUpdate } = updateCompanyDto;
-    const company = await this.companyRepo.preload({ id, ...toUpdate });
+    try {
+      const { ...toUpdate } = updateCompanyDto;
+      const company = await this.companyRepo.preload({ id, ...toUpdate });
 
-    if (!company) {
-      throw new NotFoundException(`Company with id: ${id} not found`);
+      if (!company) {
+        throw new NotFoundException(`Company with id: ${id} not found`);
+      }
+
+      return await this.companyRepo.save(company);
+    } catch (error) {
+      this.handleDBExceptions(error);
     }
-
-    return await this.companyRepo.save(company);
   }
 
   async deleteCompany(id: number) {

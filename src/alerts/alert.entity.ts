@@ -28,4 +28,7 @@ export class Alert {
 
   @Column()
   status: number;
+
+  @Column({ default: 'SOS' })
+  type: string;
 }

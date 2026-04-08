@@ -84,13 +84,17 @@ export class AlertsService implements OnModuleInit, OnModuleDestroy {
   }
 
   sendAlertToCompany(companyId: number, alert: Alert) {
+    if (alert.status !== 0) return;
+
     const clients = this.clientsByCompany.get(companyId);
-    if (clients) {
-      clients.forEach((client) => {
-        client.emit('alert', alert);
-      });
-      this.updateAlertStatus(alert.id, { status: 1 });
-    }
+
+    if (!clients || clients.size === 0) return;
+
+    clients.forEach((client) => {
+      client.emit('alert', alert);
+    });
+
+    this.updateAlertStatus(alert.id, { status: 1 });
   }
 
   async findAlertsById(id: number) {
@@ -178,6 +182,22 @@ export class AlertsService implements OnModuleInit, OnModuleDestroy {
 
   async createAlert(createAlertDto: CreateAlertDto) {
     try {
+      const user = await this.userService.findOneById(createAlertDto.iduser);
+
+      if (!user) {
+        throw new NotFoundException(
+          `El usuario con id ${createAlertDto.iduser} no existe`,
+        );
+      }
+
+      if (!user.company?.id) {
+        throw new NotFoundException(
+          `El usuario con id ${createAlertDto.iduser} no está asociado a ninguna empresa`,
+        );
+      }
+
+      createAlertDto.companyId = user.company.id;
+
       const serverDate = new Date().toISOString();
       const newAlert = this.alertsRepo.create({
         ...createAlertDto,
@@ -185,21 +205,21 @@ export class AlertsService implements OnModuleInit, OnModuleDestroy {
       });
       return await this.alertsRepo.save(newAlert);
     } catch (error) {
-      throw new Error(error);
+      throw error;
     }
   }
 
   async updateAlertStatus(id: number, newStatus: UpdateAlertStatusDto) {
-    const { affected } = await this.alertsRepo.update(id, {
-      status: newStatus.status,
-    });
+    const alert = await this.alertsRepo.findOne({ where: { id } });
 
-    if (affected === 0) {
-      throw new NotFoundException(`Alert with id ${id} not found`);
+    if (!alert) {
+      throw new NotFoundException(`La alerta con id ${id} no existe`);
     }
 
-    return await this.alertsRepo.find({
-      where: { id },
-    });
+    alert.status = newStatus.status;
+
+    await this.alertsRepo.save(alert);
+
+    return alert;
   }
 }

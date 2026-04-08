@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Post,
   Put,
 } from '@nestjs/common';
@@ -24,7 +25,7 @@ export class CompaniesController {
   }
 
   @Get('/:id')
-  getCompanyById(@Param('id') id: number) {
+  getCompanyById(@Param('id', ParseIntPipe) id: number) {
     return this.companiesService.findCompanyById(id);
   }
 
@@ -40,31 +41,31 @@ export class CompaniesController {
     description: 'Faltan datos para crear la compañia',
     type: Company,
   })
-  create(@Body() CreateCompanyDto: CreateCompanyDto) {
-    return this.companiesService.create(CreateCompanyDto);
+  create(@Body() createCompanyDto: CreateCompanyDto) {
+    return this.companiesService.create(createCompanyDto);
   }
 
   @Put('/:id')
   updateCompany(
-    @Param('id') id: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updateCompanyDto: UpdateCompanyDto,
   ) {
-    return this.companiesService.updateCompany(Number(id), updateCompanyDto);
+    return this.companiesService.updateCompany(id, updateCompanyDto);
   }
 
   @Put('/active/:id')
   @ApiResponse({
     status: 201,
-    description: 'La compañia fue actualizado exitosamente',
+    description: 'La compañia fue actualizada exitosamente',
     type: Company,
   })
   @ApiResponse({ status: 400, description: 'Bad request', type: Company })
-  updateActiveCompany(@Param('id') id: number) {
+  updateActiveCompany(@Param('id', ParseIntPipe) id: number) {
     return this.companiesService.updateActiveCompany(id);
   }
 
-  @Delete(':id')
-  deleteCompany(id: number) {
+  @Delete('/:id')
+  deleteCompany(@Param('id', ParseIntPipe) id: number) {
     return this.companiesService.deleteCompany(id);
   }
 }
