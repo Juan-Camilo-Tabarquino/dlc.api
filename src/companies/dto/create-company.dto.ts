@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  IsArray,
   IsBoolean,
   IsEmail,
   IsNotEmpty,
@@ -38,4 +39,9 @@ export class CreateCompanyDto {
   @IsString()
   @IsOptional()
   logo?: string;
+
+  @ApiProperty()
+  @IsArray()
+  @IsOptional()
+  monitoringTime?: string[];
 }
