@@ -6,6 +6,9 @@ export class Company {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column({ type: 'integer', nullable: true })
+  companyIdVt: number | null;
+
   @Column({ nullable: false })
   name: string;
 
