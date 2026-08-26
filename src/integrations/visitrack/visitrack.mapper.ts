@@ -14,35 +14,60 @@ const percentage = (part: number, total: number) =>
 const array = (value: unknown): Record<string, unknown>[] =>
   Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
 
+const record = (value: unknown): Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+
+/** Visitrack wraps successful payloads in `response`; accept `data` for compatibility. */
+const unwrap = (payload: unknown): unknown => {
+  const envelope = record(payload);
+  return envelope.response ?? envelope.data ?? payload;
+};
+
+const rows = (payload: unknown): Record<string, unknown>[] =>
+  array(unwrap(payload));
+
+const firstDefined = (...values: unknown[]): unknown =>
+  values.find((value) => value !== undefined && value !== null);
+
+const active = (row: Record<string, unknown>): boolean | null => {
+  const value = firstDefined(row.Active, row.IsActive, row.StatusEnabled);
+  if (value !== undefined) {
+    return value === true || value === 1 || value === '1';
+  }
+  if (row.IsDeleted !== undefined && row.IsDeleted !== null) {
+    return !(
+      row.IsDeleted === true ||
+      row.IsDeleted === 1 ||
+      row.IsDeleted === '1'
+    );
+  }
+  return null;
+};
+
 export function mapSurveys(payload: unknown): VisitrackSurvey[] {
-  const rows = Array.isArray(payload)
-    ? payload
-    : array((payload as Record<string, unknown>)?.data);
-  return rows
+  return rows(payload)
     .map((row) => ({
       ...row,
-      SurveyID: number(row.SurveyID),
+      SurveyID: number(firstDefined(row.SurveyID, row.ID)),
       Title: String(row.Title ?? ''),
     }))
     .sort((a, b) => a.Title.localeCompare(b.Title));
 }
 
 export function mapUsers(payload: unknown): VisitrackUser[] {
-  const rows = Array.isArray(payload)
-    ? payload
-    : array((payload as Record<string, unknown>)?.data);
-  return rows.map((row) => ({
-    UserID: number(row.UserID),
-    UserName: String(row.UserName ?? ''),
-    Active:
-      row.Active == null
-        ? null
-        : row.Active === true || row.Active === 1 || row.Active === '1',
+  return rows(payload).map((row) => ({
+    UserID: number(firstDefined(row.UserID, row.ID)),
+    UserName: String(
+      firstDefined(row.UserName, row.Username, row.Name, row.FullName) ?? '',
+    ),
+    Active: active(row),
   }));
 }
 
 export function mapStats(payload: unknown, selected?: number[]): ActivityStats {
-  const source = (payload ?? {}) as Record<string, unknown>;
+  const source = record(unwrap(payload));
   const details = array(source.DetalleSurveys).filter(
     (row) => !selected || selected.includes(number(row.SurveyID)),
   );
@@ -83,7 +108,7 @@ export function mapCounter(
   payload: unknown,
   survey: VisitrackSurvey,
 ): CounterResult {
-  const row = (payload ?? {}) as Record<string, unknown>;
+  const row = record(unwrap(payload));
   return {
     SurveyID: survey.SurveyID,
     Title: survey.Title,
