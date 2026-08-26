@@ -76,17 +76,54 @@ describe('Visitrack mapper', () => {
     ).toMatchObject({ Porcentaje: 0, Usuarios: [{ Porcentaje: 0 }] });
   });
 
-  it('unwraps stats and counter responses', () => {
+  it('unwraps stats responses', () => {
     expect(
       mapStats({
         response: { DetalleSurveys: [{ SurveyID: 1, TotalActividades: 2 }] },
       }).TotalActividades,
     ).toBe(2);
+  });
+
+  it('maps counter data from response[0] and catalogs from the envelope', () => {
     expect(
       mapCounter(
-        { response: { TotalActividades: 4 } },
-        { SurveyID: 1, Title: 'A' },
-      ).TotalActividades,
-    ).toBe(4);
+        {
+          status: true,
+          count: 1,
+          response: [
+            {
+              SurveyID: 21797,
+              Title: 'RONDAS',
+              TotalActividades: 1461,
+              TotalActivas: 1460,
+              TotalEliminadas: 1,
+              ActividadesSinLocation: 0,
+              ActividadesSinAsset: 1461,
+              Locations: [{ LocationID: 1, LocationName: 'PORTERÍA' }],
+              Assets: [],
+            },
+          ],
+          AssetsSinActividad: [{ AssetID: 2, AssetName: 'RADIO' }],
+          LocationsSinActividad: [
+            { LocationID: 1549566, LocationName: 'CUARTO DE MOTOBOMBAS' },
+          ],
+        },
+        { SurveyID: 21797, Title: 'RONDAS' },
+      ),
+    ).toEqual({
+      SurveyID: 21797,
+      Title: 'RONDAS',
+      TotalActividades: 1461,
+      TotalActivas: 1460,
+      TotalEliminadas: 1,
+      ActividadesSinLocation: 0,
+      ActividadesSinAsset: 1461,
+      Locations: [{ LocationID: 1, LocationName: 'PORTERÍA' }],
+      Assets: [],
+      AssetsSinActividad: [{ AssetID: 2, AssetName: 'RADIO' }],
+      LocationsSinActividad: [
+        { LocationID: 1549566, LocationName: 'CUARTO DE MOTOBOMBAS' },
+      ],
+    });
   });
 });

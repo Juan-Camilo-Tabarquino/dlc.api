@@ -108,7 +108,14 @@ export function mapCounter(
   payload: unknown,
   survey: VisitrackSurvey,
 ): CounterResult {
-  const row = record(unwrap(payload));
+  const envelope = record(payload);
+  const unwrapped = unwrap(payload);
+  const counter = Array.isArray(unwrapped)
+    ? record(unwrapped[0])
+    : record(unwrapped);
+  // Counter totals are returned in response[0], while the no-activity catalogs
+  // are siblings of response in the provider envelope.
+  const row = { ...envelope, ...counter };
   return {
     SurveyID: survey.SurveyID,
     Title: survey.Title,
