@@ -1,0 +1,527 @@
+INTEGRACIÓN FRONTEND DEL DASHBOARD VISITRACK
+=============================================
+
+Usa este documento como contexto e instrucciones para implementar en el frontend
+el dashboard de Visitrack. No llames services.visitrack.com desde el navegador y
+no envíes CompanyID ni companyIdVt: el backend obtiene el identificador externo
+desde la compañía del usuario autenticado.
+
+
+1. INFORMACIÓN GENERAL
+-----------------------
+
+Base path:
+
+  /integrations/visitrack
+
+Todos los endpoints requieren el JWT de la sesión:
+
+  Authorization: Bearer <token>
+
+Solo tienen acceso los roles internos:
+
+  1 = superadministrador
+  2 = administrador
+
+Otros roles reciben HTTP 403. Un token ausente, inválido o expirado produce
+HTTP 401.
+
+Swagger del backend:
+
+  /api
+
+
+2. TIPOS TYPESCRIPT PARA EL FRONTEND
+------------------------------------
+
+export interface VisitrackSurvey {
+  SurveyID: number;
+  Title: string;
+  [field: string]: unknown;
+}
+
+export interface VisitrackUser {
+  UserID: number;
+  UserName: string;
+  Active: boolean | null;
+}
+
+export interface VisitrackActivityUser {
+  UserID: number;
+  UserName: string;
+  TotalActividades: number;
+  Porcentaje: number;
+}
+
+export interface VisitrackActivitySurvey {
+  SurveyID: number;
+  Title: string;
+  TotalActividades: number;
+  Porcentaje: number;
+  Usuarios: VisitrackActivityUser[];
+  more: unknown;
+}
+
+export interface VisitrackActivityStats {
+  status: string | null;
+  TotalSurveys: number;
+  Usuarios: {
+    Activos: number;
+    Inactivos: number;
+  };
+  TotalActividades: number;
+  DetalleSurveys: VisitrackActivitySurvey[];
+}
+
+export interface VisitrackCounterResult {
+  SurveyID: number;
+  Title: string;
+  TotalActividades: number;
+  TotalActivas: number;
+  TotalEliminadas: number;
+  ActividadesSinLocation: number;
+  ActividadesSinAsset: number;
+  Locations: unknown[];
+  Assets: unknown[];
+  LocationsSinActividad: unknown[];
+  AssetsSinActividad: unknown[];
+}
+
+export interface VisitrackCounterError {
+  SurveyID: number;
+  code: string;
+  message: string;
+}
+
+export interface VisitrackCountersResponse {
+  data: VisitrackCounterResult[];
+  errors: VisitrackCounterError[];
+  meta: {
+    requested: number;
+    succeeded: number;
+    failed: number;
+  };
+}
+
+export interface VisitrackFilters {
+  from: string;
+  to: string;
+  surveyIds?: number[];
+}
+
+
+3. CATÁLOGO DE FORMULARIOS
+--------------------------
+
+Endpoint:
+
+  GET /integrations/visitrack/surveys
+
+No recibe query params.
+
+Ejemplo de respuesta HTTP 200:
+
+[
+  {
+    "SurveyID": 15,
+    "Title": "Inspección de equipos"
+  },
+  {
+    "SurveyID": 28,
+    "Title": "Visita comercial"
+  }
+]
+
+La respuesta es un array directo. SurveyID se normaliza como number, Title como
+string y los resultados se ordenan alfabéticamente por Title. El backend puede
+preservar otros campos del proveedor, pero no dependas de ellos como contrato
+estable.
+
+Usa este endpoint para llenar el multiselect de formularios y resolver sus
+títulos. Para la opción "Todos", conserva una selección vacía y omite surveyIds
+en las consultas; no envíes las palabras "all" ni "todos".
+
+
+4. CATÁLOGO DE USUARIOS
+-----------------------
+
+Endpoint:
+
+  GET /integrations/visitrack/users
+
+No recibe query params.
+
+Ejemplo de respuesta HTTP 200:
+
+[
+  {
+    "UserID": 101,
+    "UserName": "Usuario de ejemplo",
+    "Active": true
+  },
+  {
+    "UserID": 102,
+    "UserName": "Otro usuario",
+    "Active": false
+  },
+  {
+    "UserID": 103,
+    "UserName": "Estado no informado",
+    "Active": null
+  }
+]
+
+Active=true significa activo, false significa inactivo y null significa que el
+proveedor no informó el estado. No conviertas null en false.
+
+
+5. ESTADÍSTICAS DE ACTIVIDAD
+----------------------------
+
+Endpoint:
+
+  GET /integrations/visitrack/activity/stats
+
+Query params:
+
+  from       obligatorio, fecha YYYY-MM-DD
+  to         obligatorio, fecha YYYY-MM-DD
+  surveyIds  opcional, IDs positivos separados por coma, por ejemplo 15,28
+
+Las fechas son inclusivas, from debe ser menor o igual que to y el rango máximo
+predeterminado es 93 días (puede cambiar por configuración del backend).
+
+Ejemplo:
+
+  GET /integrations/visitrack/activity/stats?from=2026-08-01&to=2026-08-21&surveyIds=15,28
+
+Ejemplo de respuesta HTTP 200:
+
+{
+  "status": "OK",
+  "TotalSurveys": 2,
+  "Usuarios": {
+    "Activos": 12,
+    "Inactivos": 3
+  },
+  "TotalActividades": 40,
+  "DetalleSurveys": [
+    {
+      "SurveyID": 15,
+      "Title": "Inspección de equipos",
+      "TotalActividades": 30,
+      "Porcentaje": 75,
+      "Usuarios": [
+        {
+          "UserID": 101,
+          "UserName": "Usuario de ejemplo",
+          "TotalActividades": 10,
+          "Porcentaje": 33.33
+        }
+      ],
+      "more": null
+    },
+    {
+      "SurveyID": 28,
+      "Title": "Visita comercial",
+      "TotalActividades": 10,
+      "Porcentaje": 25,
+      "Usuarios": [],
+      "more": null
+    }
+  ]
+}
+
+Reglas de cálculo:
+
+  Survey.Porcentaje = actividades del survey / total del conjunto * 100
+  Usuario.Porcentaje = actividades del usuario / total del survey * 100
+
+El backend redondea los porcentajes a dos decimales y devuelve 0 si el
+denominador es cero. Si se envían surveyIds, el backend filtra el detalle y
+recalcula TotalSurveys, TotalActividades y los porcentajes sobre la selección.
+
+Usuarios.Activos y Usuarios.Inactivos son métricas globales de la compañía. No
+las presentes como usuarios únicos de los surveys seleccionados.
+
+
+6. CONTADORES POR FORMULARIO
+---------------------------
+
+Endpoint:
+
+  GET /integrations/visitrack/activity/counters
+
+Query params:
+
+  from       obligatorio, fecha YYYY-MM-DD
+  to         obligatorio, fecha YYYY-MM-DD
+  surveyIds  opcional, IDs positivos separados por coma
+
+Ejemplo para formularios específicos:
+
+  GET /integrations/visitrack/activity/counters?from=2026-08-01&to=2026-08-21&surveyIds=15,28
+
+Para solicitar todos los formularios, omite surveyIds:
+
+  GET /integrations/visitrack/activity/counters?from=2026-08-01&to=2026-08-21
+
+El backend resuelve "Todos" consultando el catálogo. Existe un límite
+predeterminado de 50 formularios y una concurrencia predeterminada de 5.
+
+Ejemplo de respuesta HTTP 200 completa:
+
+{
+  "data": [
+    {
+      "SurveyID": 15,
+      "Title": "Inspección de equipos",
+      "TotalActividades": 24,
+      "TotalActivas": 20,
+      "TotalEliminadas": 4,
+      "ActividadesSinLocation": 2,
+      "ActividadesSinAsset": 1,
+      "Locations": [],
+      "Assets": [],
+      "LocationsSinActividad": [],
+      "AssetsSinActividad": []
+    }
+  ],
+  "errors": [],
+  "meta": {
+    "requested": 1,
+    "succeeded": 1,
+    "failed": 0
+  }
+}
+
+El endpoint admite éxito parcial y puede responder HTTP 200 con data y errors al
+mismo tiempo:
+
+{
+  "data": [
+    {
+      "SurveyID": 15,
+      "Title": "Inspección de equipos",
+      "TotalActividades": 24,
+      "TotalActivas": 20,
+      "TotalEliminadas": 4,
+      "ActividadesSinLocation": 2,
+      "ActividadesSinAsset": 1,
+      "Locations": [],
+      "Assets": [],
+      "LocationsSinActividad": [],
+      "AssetsSinActividad": []
+    }
+  ],
+  "errors": [
+    {
+      "SurveyID": 28,
+      "code": "VISITRACK_COUNTER_FAILED",
+      "message": "Bad Gateway Exception"
+    }
+  ],
+  "meta": {
+    "requested": 2,
+    "succeeded": 1,
+    "failed": 1
+  }
+}
+
+Siempre renderiza los elementos recibidos en data. Si meta.failed es mayor que
+cero, muestra una advertencia no bloqueante indicando cuántos formularios no se
+pudieron cargar. Si fallan todos los formularios, el endpoint responde HTTP 502.
+
+Locations, Assets, LocationsSinActividad y AssetsSinActividad todavía tienen
+elementos de tipo unknown. No dependas de propiedades internas hasta confirmar
+el payload real. No infieras relaciones usuario-location con estos agregados.
+
+
+7. RESPUESTAS Y JSONANSWERS
+--------------------------
+
+Endpoint reservado:
+
+  GET /integrations/visitrack/activity/answers
+
+Puede recibir from, to, surveyIds y cursor, pero actualmente siempre responde
+HTTP 501 porque falta confirmar el endpoint, autenticación, estados y paginación
+del proveedor.
+
+No implementes todavía pantallas que dependan de jsonAnswers. Si se consulta el
+endpoint, muestra un estado de funcionalidad no disponible.
+
+
+8. VALIDACIONES
+---------------
+
+surveyIds se envía como CSV:
+
+  surveyIds=15,28
+
+El backend deduplica IDs repetidos conservando la primera aparición. Rechaza IDs
+que sean cero, negativos, decimales o no numéricos. No envíes un array JSON en
+el query string.
+
+Ejemplos válidos:
+
+  from=2026-08-01&to=2026-08-21
+  from=2026-08-01&to=2026-08-21&surveyIds=15
+  from=2026-08-01&to=2026-08-21&surveyIds=15,28
+
+Ejemplos inválidos:
+
+  from=01-08-2026
+  surveyIds=0
+  surveyIds=-1
+  surveyIds=1.5
+  surveyIds=all
+
+
+9. ERRORES HTTP
+---------------
+
+  400  Query params inválidos.
+  401  Token ausente, inválido o expirado.
+  403  Usuario sin permisos administrativos.
+  422  Compañía sin companyIdVt, rango inválido o demasiados surveys.
+  501  Endpoint de answers no configurado.
+  502  Error de Visitrack o fallo total de contadores.
+  504  Timeout de Visitrack.
+
+Ejemplo de error de validación HTTP 400:
+
+{
+  "statusCode": 400,
+  "message": "Validation failed",
+  "errors": [
+    "from must match /^\\d{4}-\\d{2}-\\d{2}$/ regular expression"
+  ]
+}
+
+ADVERTENCIA: el filtro global actual puede reemplazar el objeto interno de las
+excepciones 401/403/422/501/502/504 por una respuesta genérica como:
+
+{
+  "statusCode": 422,
+  "timestamp": "2026-08-21T00:00:00.000Z",
+  "path": "/integrations/visitrack/surveys",
+  "message": "Unprocessable Entity Exception"
+}
+
+Por ahora maneja esos casos principalmente por HTTP status. No hagas que la UI
+dependa exclusivamente de códigos internos como
+VISITRACK_COMPANY_NOT_CONFIGURED hasta que el backend preserve esos códigos en
+el filtro global.
+
+
+10. CLIENTE HTTP SUGERIDO
+-------------------------
+
+export class VisitrackApi {
+  constructor(
+    private readonly apiUrl: string,
+    private readonly getToken: () => string | null,
+  ) {}
+
+  private async get<T>(
+    path: string,
+    params?: Record<string, string>,
+  ): Promise<T> {
+    const token = this.getToken();
+    const url = new URL(path, this.apiUrl);
+
+    for (const [key, value] of Object.entries(params ?? {})) {
+      url.searchParams.set(key, value);
+    }
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({
+        statusCode: response.status,
+        message: response.statusText,
+      }));
+
+      throw {
+        status: response.status,
+        ...payload,
+      };
+    }
+
+    return response.json() as Promise<T>;
+  }
+
+  getSurveys(): Promise<VisitrackSurvey[]> {
+    return this.get('/integrations/visitrack/surveys');
+  }
+
+  getUsers(): Promise<VisitrackUser[]> {
+    return this.get('/integrations/visitrack/users');
+  }
+
+  getStats(filters: VisitrackFilters): Promise<VisitrackActivityStats> {
+    return this.get('/integrations/visitrack/activity/stats', {
+      from: filters.from,
+      to: filters.to,
+      ...(filters.surveyIds?.length
+        ? { surveyIds: filters.surveyIds.join(',') }
+        : {}),
+    });
+  }
+
+  getCounters(filters: VisitrackFilters): Promise<VisitrackCountersResponse> {
+    return this.get('/integrations/visitrack/activity/counters', {
+      from: filters.from,
+      to: filters.to,
+      ...(filters.surveyIds?.length
+        ? { surveyIds: filters.surveyIds.join(',') }
+        : {}),
+    });
+  }
+}
+
+
+11. TAREA PARA CODEX EN EL FRONTEND
+-----------------------------------
+
+Antes de editar, inspecciona la arquitectura, convenciones, autenticación,
+cliente HTTP, manejo de estado, componentes, diseño, gráficas, validación y
+pruebas existentes del frontend y reutilízalos.
+
+Implementa el dashboard Visitrack consumiendo exclusivamente los endpoints
+internos documentados arriba. Requisitos:
+
+1. Crear tipos explícitos para todos los contratos; no usar any.
+2. Reutilizar el cliente HTTP y el mecanismo existente para adjuntar el JWT.
+3. Nunca enviar CompanyID o companyIdVt desde el navegador.
+4. Cargar surveys y users para los catálogos del dashboard.
+5. Crear filtros inclusivos from/to en formato YYYY-MM-DD.
+6. Crear multiselect de surveys y enviar los IDs como CSV.
+7. Representar "Todos" omitiendo surveyIds.
+8. Consumir stats para tarjetas, totales, porcentajes y desglose por usuario.
+9. Consumir counters para actividad, locations y assets.
+10. Renderizar resultados parciales de counters y mostrar un aviso si
+    meta.failed > 0.
+11. No mezclar Usuarios.Activos/Inactivos globales con usuarios únicos de la
+    selección.
+12. No inferir relaciones usuario-location.
+13. No implementar jsonAnswers como si estuviera disponible; mostrar una
+    funcionalidad pendiente para HTTP 501.
+14. Manejar loading, empty state, error y partial-success state.
+15. Cancelar o ignorar requests obsoletos cuando cambien rápidamente los filtros.
+16. No imprimir tokens ni respuestas sensibles en logs.
+17. Mantener accesibilidad, responsive design y convenciones visuales actuales.
+18. Añadir pruebas del cliente, filtros, estados vacíos, errores, permisos y
+    resultados parciales.
+19. Ejecutar format, lint, typecheck, unit tests y pruebas e2e disponibles.
+
+Antes de dar por terminada la implementación, informa cualquier diferencia entre
+los contratos reales recibidos y los ejemplos de este documento, especialmente
+en Locations, Assets, more y Active.

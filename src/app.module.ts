@@ -10,6 +10,7 @@ import { typeOrmDBConfig } from './config/database.config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './users/users.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { IntegrationsModule } from './integrations/integrations.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     LastlocationsModule,
     LocationsModule,
     NotificationsModule,
+    IntegrationsModule,
     RolesModule,
     TypeOrmModule.forRoot(typeOrmDBConfig),
     UsersModule,

@@ -70,8 +70,10 @@ export class CompaniesService {
 
   async updateCompany(id: number, updateCompanyDto: UpdateCompanyDto) {
     try {
-      const { ...toUpdate } = updateCompanyDto;
-      const company = await this.companyRepo.preload({ id, ...toUpdate });
+      const company = await this.companyRepo.preload({
+        id,
+        ...updateCompanyDto,
+      });
 
       if (!company) {
         throw new NotFoundException(`Company with id: ${id} not found`);

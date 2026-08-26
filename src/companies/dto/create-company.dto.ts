@@ -5,11 +5,18 @@ import {
   IsEmail,
   IsNotEmpty,
   IsNumberString,
+  IsInt,
+  Min,
   IsOptional,
   IsString,
 } from 'class-validator';
 
 export class CreateCompanyDto {
+  @ApiProperty({ required: false, nullable: true, minimum: 1 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  companyIdVt?: number | null;
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
